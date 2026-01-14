@@ -17,10 +17,13 @@ namespace SystemInfo
         private readonly HardwareInfo hardwareInfo;
         private readonly List<string> errorList;
 
+        private readonly List<FolderSizeInfo> _topFolders;
+
         public Execute()
         {
             hardwareInfo = new();
             errorList = new();
+            _topFolders = new();
         }
 
         public void Start()
@@ -29,43 +32,26 @@ namespace SystemInfo
             Console.WriteLine("Sto recuperando le info hardware, potrebbe richiedere qualche minuto...\n");
             hardwareInfo.RefreshAll();
 
-            Console.WriteLine("----- SysInfo version 0.0.2 -----\n");
+            Console.WriteLine("----- SysInfo version 1.1.3 -----\n");
 
             // generic info hardware e os
             GenericSysInfo();
 
-            // Chiedo all 'utente il disco di cui vuole le info
-            Console.WriteLine("----- Scrivi il nome del disco interessato per info (esempio: 'C') -----");
-            string? driveName = Console.ReadLine()?.ToUpper();
+            // info sui drive e cartelle
+            RetrieveInformationsOnDrives();
 
-            CheckOnDrive(driveName, out string rootPath);
-
-            var rootDir = new DirectoryInfo(rootPath);
-
-            DirectoryInfo[] rootSubDirs = rootDir.GetDirectories();
-
-            foreach (var dir in rootSubDirs)
+            // top n cartelle più pesanti
+            foreach (var folder in _topFolders.OrderByDescending(f => f.Size))
             {
-                long dirSize = GetDirectoriesSize(dir);
-
-                Console.WriteLine($"--- Cartella: {dir.FullName} \n\tDimensioni Totali: {ConvertToGb((ulong)dirSize)} GB.");
+                Console.WriteLine($"{folder.Path} {ConvertToGb((ulong)folder.Size)} GB");
             }
-
-            //Console.WriteLine("--- Cartelle senza permessi di accesso:\n");
-            //foreach (var noAccess in errorList)
-            //{
-            //    Console.WriteLine(noAccess);
-            //}
         }
-
-
 
         // Hardware.Info
         // recupero info generiche sul sistema
-        void GenericSysInfo()
+        private void GenericSysInfo()
         {
             Console.WriteLine($"Sistema operativo: \n{hardwareInfo.OperatingSystem}");
-            //Console.WriteLine($"RAM Totale: {Math.Round(_hardwareInfo.MemoryStatus.TotalPhysical / standardFactorByteToGb)} GB.");
             Console.WriteLine($"RAM Totale: {ConvertToGb(hardwareInfo.MemoryStatus.TotalPhysical)} GB.");
             Console.WriteLine($"RAM Disponibile: {ConvertToGb(hardwareInfo.MemoryStatus.AvailablePhysical)} GB.\n");
 
@@ -104,6 +90,61 @@ namespace SystemInfo
                 indexVideo++;
             }
         }
+        private void RetrieveInformationsOnDrives()
+        {
+            DriveInfo[] allDrives = DriveInfo.GetDrives();
+            foreach (var drive in allDrives)
+            {
+                Console.WriteLine("Drive {0}", drive.Name);
+                Console.WriteLine("  Drive type: {0}", drive.DriveType);
+
+                if (!drive.IsReady)
+                {
+                    Console.WriteLine("Driver non pronto");
+                    continue;
+                }
+
+                Console.WriteLine("  Volume label: {0}", drive.VolumeLabel);
+                Console.WriteLine("  File system: {0}", drive.DriveFormat);
+                Console.WriteLine(
+                    "  Spazio libero per l'utente:    {0, 15} GB",
+                    ConvertToGb((ulong)drive.AvailableFreeSpace));
+                Console.WriteLine(
+                    "  Spazio totale libero:          {0, 15} GB",
+                    ConvertToGb((ulong)drive.TotalFreeSpace));
+                Console.WriteLine(
+                    "  Spazio totale:                 {0, 15} GB ",
+                    ConvertToGb((ulong)drive.TotalSize));
+
+                double usedPercent = 100.0 * (drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
+                Console.WriteLine(
+                    "  Percentuale utilizzata:                    {0, 2:0.00} %",
+                    usedPercent);
+
+                var rootDir = new DirectoryInfo(drive.Name);
+                DirectoryInfo[] rootSubDirs = rootDir.GetDirectories();
+
+                Console.WriteLine($"\n--- Analisi cartelle in '{drive.Name}' ---\n");
+                foreach (var dir in rootSubDirs)
+                {
+                    long dirSize = GetDirectoriesSize(dir);
+                    Console.WriteLine($"--- Cartella: {dir.FullName} \n\tDimensioni Totali: {ConvertToGb((ulong)dirSize)} GB.");
+                }
+
+                Console.WriteLine("\n--- Vuoi calcolare le 10 cartelle più pesanti? [Y/N] ---");
+
+                string? answer = Console.ReadLine()?.ToUpper();
+
+                if (answer == string.Empty || answer != "Y")
+                {
+                    return;
+                }
+
+                Console.WriteLine("\n--- Calcolo le cartelle più pesanti, potrebbe richiedere qualche minuto. ---");
+                Console.WriteLine($"\n--- Top 10 cartelle più pesanti in '{drive.Name}' ---\n");
+                TryProcessDirectory(drive.Name, 10);
+            }
+        }
 
         // fa un resoconto dalla root quanto pesa una cartella in byte
         // poi viene convertita in giga
@@ -128,13 +169,11 @@ namespace SystemInfo
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    //Console.WriteLine($"[NO ACCESS] {dir.FullName} - {ex.Message}");
                     errorList.Add($"[NO ACCESS] on {dir.FullName} - {ex.Message}");
                     continue;
                 }
                 catch (IOException ex)
                 {
-                    //Console.WriteLine($"[GENERIC ERROR] {dir.FullName} - {ex.Message}");
                     errorList.Add($"[GENERIC ERROR] on {dir.FullName} - {ex.Message}");
                     continue;
                 }
@@ -152,31 +191,92 @@ namespace SystemInfo
 
             return total;
         }
-        private static void CheckOnDrive(string? driveName, out string rootPath)
-        {
-            rootPath = string.Empty;
-
-            if (string.IsNullOrEmpty(driveName))
-            {
-                Console.WriteLine("Nome del disco non può essere vuoto.");
-                return;
-            }
-
-            // guardo se esiste il disco
-            var driveUser = DriveInfo.GetDrives().FirstOrDefault(d => d.IsReady && d.Name.StartsWith(driveName));
-
-            if (driveUser == null)
-            {
-                Console.WriteLine($"Disco '{driveName}' non trovato o non pronto.");
-                return;
-            }
-
-            rootPath = driveUser.RootDirectory.FullName;
-        }
 
         private static double ConvertToGb(ulong value)
         {
             return Math.Round(value / STANDARD_FACTOR_BYTE_TO_GB );
+        }
+
+
+        private void TryProcessDirectory(string path, int topN)
+        {
+            long size = 0;
+
+            try
+            {
+                // file diretti
+                foreach (var file in Directory.EnumerateFiles(path))
+                {
+                    try
+                    {
+                        var info = new FileInfo(file);
+                        size += info.Length;
+                    }
+                    catch { /* ignora file non accessibili */ }
+                }
+
+                // sottocartelle
+                foreach (var dir in Directory.EnumerateDirectories(path))
+                {
+                    size += GetDirectorySizeRecursive(dir, topN);
+                }
+
+                UpdateTopFolders(path, size, topN);
+            }
+            catch
+            {
+                // ignora cartelle non accessibili
+            }
+        }
+
+        private long GetDirectorySizeRecursive(string path, int topN)
+        {
+            long size = 0;
+
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(path))
+                {
+                    try
+                    {
+                        var info = new FileInfo(file);
+                        size += info.Length;
+                    }
+                    catch { }
+                }
+
+                foreach (var dir in Directory.EnumerateDirectories(path))
+                {
+                    size += GetDirectorySizeRecursive(dir, topN);
+                }
+
+                UpdateTopFolders(path, size, topN);
+            }
+            catch
+            {
+                // ignora
+            }
+
+            return size;
+        }
+
+        private void UpdateTopFolders(string path, long size, int topN)
+        {
+            if (size <= 0) return;
+
+            if (_topFolders.Count < topN)
+            {
+                _topFolders.Add(new FolderSizeInfo { Path = path, Size = size });
+            }
+            else
+            {
+                var min = _topFolders.MinBy(f => f.Size);
+                if (min != null && size > min.Size)
+                {
+                    _topFolders.Remove(min);
+                    _topFolders.Add(new FolderSizeInfo { Path = path, Size = size });
+                }
+            }
         }
     }
 }
