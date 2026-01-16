@@ -7,32 +7,35 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.ComponentModel.Design.Serialization;
+using System.Globalization;
+using System.Security.Principal;
+using SystemInfo.Interfaces;
 
 namespace SystemInfo
 {
     class Execute
     {
-        const double STANDARD_FACTOR_BYTE_TO_GB = 1073741824; // valore fisso per convertire da byte a giga
-
         private readonly HardwareInfo hardwareInfo;
         private readonly List<string> errorList;
 
         private readonly List<FolderSizeInfo> _topFolders;
+        private readonly IOutput _output;
 
         public Execute()
         {
             hardwareInfo = new();
             errorList = new();
             _topFolders = new();
+            _output = new ConsoleOutput();
         }
 
         public void Start()
         {
-            // refresho le info hardware
-            Console.WriteLine("Sto recuperando le info hardware, potrebbe richiedere qualche minuto...\n");
-            hardwareInfo.RefreshAll();
+            _output.WriteLine("----- SysInfo version 1.2.4 -----\n");
 
-            Console.WriteLine("----- SysInfo version 1.1.3 -----\n");
+            // refresho le info hardware
+            _output.WriteLine("Sto recuperando le info hardware, potrebbe richiedere qualche minuto...\n");
+            hardwareInfo.RefreshAll();
 
             // generic info hardware e os
             GenericSysInfo();
@@ -43,7 +46,9 @@ namespace SystemInfo
             // top n cartelle più pesanti
             foreach (var folder in _topFolders.OrderByDescending(f => f.Size))
             {
-                Console.WriteLine($"{folder.Path} {ConvertToGb((ulong)folder.Size)} GB");
+                var sizeConverted = ConvertSize((long)folder.Size);
+                _output.WriteLine("{0, 15}",
+                    $"{folder.Path} {sizeConverted.Value.ToString("0.##", CultureInfo.InvariantCulture)} {sizeConverted.Unit}");
             }
         }
 
@@ -51,41 +56,50 @@ namespace SystemInfo
         // recupero info generiche sul sistema
         private void GenericSysInfo()
         {
-            Console.WriteLine($"Sistema operativo: \n{hardwareInfo.OperatingSystem}");
-            Console.WriteLine($"RAM Totale: {ConvertToGb(hardwareInfo.MemoryStatus.TotalPhysical)} GB.");
-            Console.WriteLine($"RAM Disponibile: {ConvertToGb(hardwareInfo.MemoryStatus.AvailablePhysical)} GB.\n");
+            _output.WriteLine($"Sistema operativo: \n{hardwareInfo.OperatingSystem}");
+
+            var totalRAM = ConvertSize((long)hardwareInfo.MemoryStatus.TotalPhysical);
+            _output.WriteLine($"RAM Totale: {totalRAM.Value.ToString("0.##", CultureInfo.InvariantCulture)} {totalRAM.Unit}");
+
+            var availableRAM = ConvertSize((long)hardwareInfo.MemoryStatus.AvailablePhysical);
+            _output.WriteLine($"RAM Disponibile: {availableRAM.Value.ToString("0.##", CultureInfo.InvariantCulture)} {availableRAM.Unit}\n");
 
             foreach (var hardware in hardwareInfo.ComputerSystemList)
             {
-                Console.WriteLine($"Nome Dispositivo: {hardware.Name}.");
-                Console.WriteLine($"Vendor: {hardware.Vendor}.");
+                _output.WriteLine($"Nome Dispositivo: {hardware.Name}.");
+                _output.WriteLine($"Vendor: {hardware.Vendor}.");
             }
 
             foreach (var hardware in hardwareInfo.CpuList)
             {
-                Console.WriteLine($"Nome Processore: {hardware.Name}.");
-                Console.WriteLine($"Numero dei Core: {hardware.NumberOfCores}.");
-                Console.WriteLine($"Numero dei processori logici: {hardware.NumberOfLogicalProcessors}.\n");
+                _output.WriteLine($"Nome Processore: {hardware.Name}.");
+                _output.WriteLine($"Numero dei Core: {hardware.NumberOfCores}.");
+                _output.WriteLine($"Numero dei processori logici: {hardware.NumberOfLogicalProcessors}.\n");
             }
 
             int indexAudio = 0;
             foreach (var hardware in hardwareInfo.SoundDeviceList)
             {
-                Console.WriteLine($"--- Scheda audio #{indexAudio} ---");
-                Console.WriteLine(hardware);
+                _output.WriteLine($"--- Scheda audio #{indexAudio} ---");
+                _output.WriteLine(hardware.Caption);
+                _output.WriteLine(hardware.Description);
+                _output.WriteLine(hardware.Manufacturer);
+                _output.WriteLine(hardware.Name);
+                _output.WriteLine(hardware.ProductName);
+
                 indexAudio++;
             }
 
             int indexVideo = 0;
             foreach (var hardware in hardwareInfo.VideoControllerList)
             {
-                Console.WriteLine($"--- Scheda video #{indexVideo} ---");
-                Console.WriteLine($"Name: {hardware.Name}.");
-                Console.WriteLine($"Desrizione: {hardware.Description}.");
-                Console.WriteLine($"Refresh rate attuale: {hardware.CurrentRefreshRate}.");
-                Console.WriteLine($"Refresh rate min: {hardware.MinRefreshRate}.");
-                Console.WriteLine($"Refresh rate max: {hardware.MaxRefreshRate}.");
-                Console.WriteLine($"Refresh rate orizzontale x verticale: {hardware.CurrentHorizontalResolution} x {hardware.CurrentVerticalResolution}.\n");
+                _output.WriteLine($"--- Scheda video #{indexVideo} ---");
+                _output.WriteLine($"Name: {hardware.Name}.");
+                _output.WriteLine($"Desrizione: {hardware.Description}.");
+                _output.WriteLine($"Refresh rate attuale: {hardware.CurrentRefreshRate}.");
+                _output.WriteLine($"Refresh rate min: {hardware.MinRefreshRate}.");
+                _output.WriteLine($"Refresh rate max: {hardware.MaxRefreshRate}.");
+                _output.WriteLine($"Refresh rate orizzontale x verticale: {hardware.CurrentHorizontalResolution} x {hardware.CurrentVerticalResolution}.\n");
 
                 indexVideo++;
             }
@@ -95,53 +109,63 @@ namespace SystemInfo
             DriveInfo[] allDrives = DriveInfo.GetDrives();
             foreach (var drive in allDrives)
             {
-                Console.WriteLine("Drive {0}", drive.Name);
-                Console.WriteLine("  Drive type: {0}", drive.DriveType);
+                _output.WriteLine("Drive {0}", drive.Name);
+                _output.WriteLine("  Drive type: {0}", drive.DriveType);
 
                 if (!drive.IsReady)
                 {
-                    Console.WriteLine("Driver non pronto");
+                    _output.WriteLine("Driver non pronto");
                     continue;
                 }
 
-                Console.WriteLine("  Volume label: {0}", drive.VolumeLabel);
-                Console.WriteLine("  File system: {0}", drive.DriveFormat);
-                Console.WriteLine(
-                    "  Spazio libero per l'utente:    {0, 15} GB",
-                    ConvertToGb((ulong)drive.AvailableFreeSpace));
-                Console.WriteLine(
-                    "  Spazio totale libero:          {0, 15} GB",
-                    ConvertToGb((ulong)drive.TotalFreeSpace));
-                Console.WriteLine(
-                    "  Spazio totale:                 {0, 15} GB ",
-                    ConvertToGb((ulong)drive.TotalSize));
+                _output.WriteLine("  Volume label: {0}", drive.VolumeLabel);
+                _output.WriteLine("  File system: {0}", drive.DriveFormat);
+
+                var availableFreeSpace = ConvertSize((long)drive.AvailableFreeSpace);
+                _output.WriteLine(
+                    "  Spazio libero per l'utente:    {0, 15}",
+                    $"{availableFreeSpace.Value.ToString("0.##", CultureInfo.InvariantCulture)} {availableFreeSpace.Unit}");
+
+
+                var totalFreeSpace = ConvertSize((long)drive.TotalFreeSpace);
+                _output.WriteLine(
+                    "  Spazio totale libero:          {0, 15}",
+                    $"{totalFreeSpace.Value.ToString("0.##", CultureInfo.InvariantCulture)} {totalFreeSpace.Unit}");
+
+                var totalSize = ConvertSize((long)drive.TotalSize);
+                _output.WriteLine(
+                    "  Spazio totale:                 {0, 15}",
+                    $"{totalSize.Value.ToString("0.##", CultureInfo.InvariantCulture)} {totalSize.Unit}");
+
 
                 double usedPercent = 100.0 * (drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
-                Console.WriteLine(
-                    "  Percentuale utilizzata:                    {0, 2:0.00} %",
+                _output.WriteLine(
+                    "  Percentuale utilizzata:        {0, 13:0.00} %",
                     usedPercent);
 
                 var rootDir = new DirectoryInfo(drive.Name);
                 DirectoryInfo[] rootSubDirs = rootDir.GetDirectories();
 
-                Console.WriteLine($"\n--- Analisi cartelle in '{drive.Name}' ---\n");
+                _output.WriteLine($"\n--- Analisi cartelle in '{drive.Name}' ---\n");
                 foreach (var dir in rootSubDirs)
                 {
                     long dirSize = GetDirectoriesSize(dir);
-                    Console.WriteLine($"--- Cartella: {dir.FullName} \n\tDimensioni Totali: {ConvertToGb((ulong)dirSize)} GB.");
+                    var res = ConvertSize((long)dirSize);
+
+                    _output.WriteLine($"--- Cartella: {dir.FullName} \n\tDimensioni Totali: {res.Value.ToString("0.##", CultureInfo.InvariantCulture)} {res.Unit}");
                 }
 
-                Console.WriteLine("\n--- Vuoi calcolare le 10 cartelle più pesanti? [Y/N] ---");
+                _output.WriteLine("\n--- Vuoi calcolare le 10 cartelle più pesanti? [Y/N] ---");
 
-                string? answer = Console.ReadLine()?.ToUpper();
-
-                if (answer == string.Empty || answer != "Y")
+                string? answer = _output.ReadLine()?.ToUpper();
+                if (string.IsNullOrEmpty(answer) || answer != "Y")
                 {
                     return;
                 }
 
-                Console.WriteLine("\n--- Calcolo le cartelle più pesanti, potrebbe richiedere qualche minuto. ---");
-                Console.WriteLine($"\n--- Top 10 cartelle più pesanti in '{drive.Name}' ---\n");
+                _output.WriteLine("\n--- Calcolo le cartelle più pesanti, potrebbe richiedere qualche minuto. ---");
+                _output.WriteLine($"\n--- Top 10 cartelle più pesanti in '{drive.Name}' ---\n");
+                
                 TryProcessDirectory(drive.Name, 10);
             }
         }
@@ -192,12 +216,24 @@ namespace SystemInfo
             return total;
         }
 
-        private static double ConvertToGb(ulong value)
+        // tupla di conversione byte -> (valore, unità di misura)
+        public static (double Value, string Unit) ConvertSize(long bytes)
         {
-            return Math.Round(value / STANDARD_FACTOR_BYTE_TO_GB );
+            const double BYTE_TO_GB = 1024d * 1024d * 1024d;
+            const double BYTE_TO_MB = 1024d * 1024d;
+
+            var gb = Math.Round(bytes / BYTE_TO_GB, 1);
+
+            if (gb >= 1)
+                return (gb, "GB");
+
+            var mb = Math.Round(bytes / BYTE_TO_MB, 2);
+            
+            return (mb, "MB");
         }
 
 
+        // processa una cartella
         private void TryProcessDirectory(string path, int topN)
         {
             long size = 0;
@@ -229,6 +265,7 @@ namespace SystemInfo
             }
         }
 
+        // calcola ricorsivamente la dimensione di una cartella
         private long GetDirectorySizeRecursive(string path, int topN)
         {
             long size = 0;
@@ -260,6 +297,7 @@ namespace SystemInfo
             return size;
         }
 
+        // recupera le top n cartelle più pesanti
         private void UpdateTopFolders(string path, long size, int topN)
         {
             if (size <= 0) return;
