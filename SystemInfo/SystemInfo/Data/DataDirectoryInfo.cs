@@ -8,6 +8,5 @@ namespace SystemInfo.Data
 {
     class DataDirectoryInfo
     {
-        
     }
 }

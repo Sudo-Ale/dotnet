@@ -32,6 +32,7 @@ namespace SystemInfo.Services
                     MinRefreshRate = drive.MinRefreshRate,
                     MaxRefreshRate = drive.MaxRefreshRate,
                     CurrentHorizontalResolution = drive.CurrentHorizontalResolution,
+                    CurrentVerticalResolution = drive.CurrentVerticalResolution
                 });
             }
 

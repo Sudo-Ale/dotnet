@@ -9,6 +9,6 @@ namespace SystemInfo.Interfaces
 {
     interface IDriveAnalyzer
     {
-        IEnumerable<DataDriveInfo> AnalyzeAllDrives();
+        IEnumerable<DataDriveInfo> AnalyzeDrives();
     }
 }

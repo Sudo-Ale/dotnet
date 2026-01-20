@@ -12,13 +12,11 @@ namespace SystemInfo.UI
     class SoundInfoPresenter
     {
         private readonly IOutput _output;
-        private readonly ISizeConverter _converter;
         private readonly ISoundAnalyzer _soundAnalyzer;
 
-        public SoundInfoPresenter(IOutput output, ISizeConverter converter, ISoundAnalyzer soundAnalyzer)
+        public SoundInfoPresenter(IOutput output, ISoundAnalyzer soundAnalyzer)
         {
             _output = output;
-            _converter = converter;
             _soundAnalyzer = soundAnalyzer;
         }
 

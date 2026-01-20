@@ -11,7 +11,7 @@ namespace SystemInfo.Services
 {
     class DriveInfoService : IDriveAnalyzer
     {
-        public IEnumerable<DataDriveInfo> AnalyzeAllDrives() 
+        public IEnumerable<DataDriveInfo> AnalyzeDrives() 
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
             var result = new List<DataDriveInfo>();

@@ -17,15 +17,14 @@ namespace SystemInfo
 {
     class Execute
     {
+        // saranno da rimuovere queste due liste
         private readonly List<string> errorList;
-
         private readonly List<FolderSizeInfo> _topFolders;
 
 
         private readonly HardwareInfo _hardwareInfo;
         private readonly IOutput _output;
         private readonly ISizeConverter _converter;
-
 
         public Execute()
         {
@@ -52,14 +51,19 @@ namespace SystemInfo
 
             // Audio e Video
             var audioInfoService = new SoundInfoService(_hardwareInfo);
-            var soundPresenter = new SoundInfoPresenter(_output, _converter, audioInfoService);
+            var soundPresenter = new SoundInfoPresenter(_output, audioInfoService);
             soundPresenter.ShowInfo();
 
             var videoInfoService = new VideoInfoService(_hardwareInfo);
-            var videoPresenter = new VideoInfoPresenter(_output, _converter, videoInfoService);
+            var videoPresenter = new VideoInfoPresenter(_output, videoInfoService);
             videoPresenter.ShowInfo();
 
-            // info sul drive storage e cartelle
+            // Drive storage
+            var driveInfoService = new DriveInfoService();
+            var drivePresenter = new DriveInfoPresenter(_output, _converter, driveInfoService);
+            drivePresenter.ShowInfo();
+
+            // Cartelle info
 
 
             // generic info hardware e os

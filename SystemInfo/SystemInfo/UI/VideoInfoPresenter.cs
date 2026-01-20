@@ -10,13 +10,11 @@ namespace SystemInfo.UI
     class VideoInfoPresenter
     {
         private readonly IOutput _output;
-        private readonly ISizeConverter _converter;
         private readonly IVideoAnalyzer _videoAnalyzer;
 
-        public VideoInfoPresenter(IOutput output, ISizeConverter converter, IVideoAnalyzer videoAnalyzer)
+        public VideoInfoPresenter(IOutput output, IVideoAnalyzer videoAnalyzer)
         {
             _output = output;
-            _converter = converter;
             _videoAnalyzer = videoAnalyzer;
         }
 
