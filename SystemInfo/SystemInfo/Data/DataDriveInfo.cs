@@ -8,20 +8,13 @@ namespace SystemInfo.Data
 {
     class DataDriveInfo
     {
-        // Sound device
-        public string AudioCaption { get; set; } = string.Empty;
-        public string AudioDescription { get; set; } = string.Empty;
-        public string AudioManufacturer { get; set; } = string.Empty;
-        public string AudioName { get; set; } = string.Empty;
-        public string AudioProductName { get; set; } = string.Empty;
-
-        // Video controller
-        public string VideoName { get; set; } = string.Empty;
-        public string VideoDescription { get; set; } = string.Empty;
-        public uint VideoCurrentRefreshRate { get; set; }
-        public uint VideoMinRefreshRate { get; set; }
-        public uint VideoMaxRefreshRate { get; set; }
-        public uint VideoCurrentHorizontalResolution { get; set; }
-        public uint VideoCurrentVerticalResolution { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string DriveType { get; set; } = string.Empty;
+        public string VolumeLabel { get; set; } = string.Empty;
+        public string DriveFormat { get; set; } = string.Empty;
+        public long AvailableFreeSpace { get; set; }
+        public long TotalFreeSpace { get; set; }
+        public long TotalSize { get; set; }
+        public double PercentageUsed { get; set; }
     }
 }

@@ -5,10 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SystemInfo.Data;
+using SystemInfo.Interfaces;
 
 namespace SystemInfo.Services
 {
-    class SystemInfoService
+    class SystemInfoService : ISystemAnalyzer
     {
         private readonly HardwareInfo _hardwareInfo;
 
@@ -17,10 +18,8 @@ namespace SystemInfo.Services
             _hardwareInfo = hardwareInfo;
         }
 
-        public DataSystemInfo GetSummary()
+        public DataSystemInfo Analyze()
         {
-            _hardwareInfo.RefreshAll();
-
             return new DataSystemInfo
             {
                 NameOperatingSystem = _hardwareInfo.OperatingSystem.Name,

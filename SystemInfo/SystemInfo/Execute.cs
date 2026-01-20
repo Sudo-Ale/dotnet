@@ -1,5 +1,4 @@
-﻿using Hardware.Info;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,24 +8,33 @@ using System.IO;
 using System.ComponentModel.Design.Serialization;
 using System.Globalization;
 using System.Security.Principal;
+using Hardware.Info;
 using SystemInfo.Interfaces;
+using SystemInfo.Services;
+using SystemInfo.UI;
 
 namespace SystemInfo
 {
     class Execute
     {
-        private readonly HardwareInfo hardwareInfo;
         private readonly List<string> errorList;
 
         private readonly List<FolderSizeInfo> _topFolders;
+
+
+        private readonly HardwareInfo _hardwareInfo;
         private readonly IOutput _output;
+        private readonly ISizeConverter _converter;
+
 
         public Execute()
         {
-            hardwareInfo = new();
             errorList = new();
             _topFolders = new();
+
+            _hardwareInfo = new();
             _output = new ConsoleOutput();
+            _converter = new SizeConverter();
         }
 
         public void Start()
@@ -35,42 +43,60 @@ namespace SystemInfo
 
             // refresho le info hardware
             _output.WriteLine("Sto recuperando le info hardware, potrebbe richiedere qualche minuto...\n");
-            hardwareInfo.RefreshAll();
+            _hardwareInfo.RefreshAll();
+
+            // system info
+            var systemInfoService = new SystemInfoService(_hardwareInfo);
+            var systemPresenter = new SystemInfoPresenter(_output, _converter, systemInfoService);
+            systemPresenter.ShowInfo();
+
+            // Audio e Video
+            var audioInfoService = new SoundInfoService(_hardwareInfo);
+            var soundPresenter = new SoundInfoPresenter(_output, _converter, audioInfoService);
+            soundPresenter.ShowInfo();
+
+            var videoInfoService = new VideoInfoService(_hardwareInfo);
+            var videoPresenter = new VideoInfoPresenter(_output, _converter, videoInfoService);
+            videoPresenter.ShowInfo();
+
+            // info sul drive storage e cartelle
+
 
             // generic info hardware e os
-            GenericSysInfo();
+            //GenericSysInfo();
 
-            // info sui drive e cartelle
-            RetrieveInformationsOnDrives();
+            //// info sui drive e cartelle
+            //RetrieveInformationsOnDrives();
 
-            // top n cartelle più pesanti
-            foreach (var folder in _topFolders.OrderByDescending(f => f.Size))
-            {
-                var sizeConverted = ConvertSize((long)folder.Size);
-                _output.WriteLine("{0, 15}",
-                    $"{folder.Path} {sizeConverted.Value.ToString("0.##", CultureInfo.InvariantCulture)} {sizeConverted.Unit}");
-            }
+            //// top n cartelle più pesanti
+            //foreach (var folder in _topFolders.OrderByDescending(f => f.Size))
+            //{
+            //    var sizeConverted = ConvertSize((long)folder.Size);
+            //    _output.WriteLine("{0, 15}",
+            //        $"{folder.Path} {sizeConverted.Value.ToString("0.##", CultureInfo.InvariantCulture)} {sizeConverted.Unit}");
+            //}
         }
 
         // Hardware.Info
         // recupero info generiche sul sistema
+        // fatto come oop per future estensioni
         private void GenericSysInfo()
         {
-            _output.WriteLine($"Sistema operativo: \n{hardwareInfo.OperatingSystem}");
+            _output.WriteLine($"Sistema operativo: \n{_hardwareInfo.OperatingSystem}");
 
-            var totalRAM = ConvertSize((long)hardwareInfo.MemoryStatus.TotalPhysical);
+            var totalRAM = ConvertSize((long)_hardwareInfo.MemoryStatus.TotalPhysical);
             _output.WriteLine($"RAM Totale: {totalRAM.Value.ToString("0.##", CultureInfo.InvariantCulture)} {totalRAM.Unit}");
 
-            var availableRAM = ConvertSize((long)hardwareInfo.MemoryStatus.AvailablePhysical);
+            var availableRAM = ConvertSize((long)_hardwareInfo.MemoryStatus.AvailablePhysical);
             _output.WriteLine($"RAM Disponibile: {availableRAM.Value.ToString("0.##", CultureInfo.InvariantCulture)} {availableRAM.Unit}\n");
 
-            foreach (var hardware in hardwareInfo.ComputerSystemList)
+            foreach (var hardware in _hardwareInfo.ComputerSystemList)
             {
                 _output.WriteLine($"Nome Dispositivo: {hardware.Name}.");
                 _output.WriteLine($"Vendor: {hardware.Vendor}.");
             }
 
-            foreach (var hardware in hardwareInfo.CpuList)
+            foreach (var hardware in _hardwareInfo.CpuList)
             {
                 _output.WriteLine($"Nome Processore: {hardware.Name}.");
                 _output.WriteLine($"Numero dei Core: {hardware.NumberOfCores}.");
@@ -78,7 +104,7 @@ namespace SystemInfo
             }
 
             int indexAudio = 0;
-            foreach (var hardware in hardwareInfo.SoundDeviceList)
+            foreach (var hardware in _hardwareInfo.SoundDeviceList)
             {
                 _output.WriteLine($"--- Scheda audio #{indexAudio} ---");
                 _output.WriteLine(hardware.Caption);
@@ -91,7 +117,7 @@ namespace SystemInfo
             }
 
             int indexVideo = 0;
-            foreach (var hardware in hardwareInfo.VideoControllerList)
+            foreach (var hardware in _hardwareInfo.VideoControllerList)
             {
                 _output.WriteLine($"--- Scheda video #{indexVideo} ---");
                 _output.WriteLine($"Name: {hardware.Name}.");
@@ -104,6 +130,9 @@ namespace SystemInfo
                 indexVideo++;
             }
         }
+
+        // Info sul drive e le sue cartelle
+        // fatto come oop per future estensioni
         private void RetrieveInformationsOnDrives()
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
@@ -172,6 +201,7 @@ namespace SystemInfo
 
         // fa un resoconto dalla root quanto pesa una cartella in byte
         // poi viene convertita in giga
+        // da fare come oop per future estensioni
         long GetDirectoriesSize(DirectoryInfo root)
         {
             long total = 0;
@@ -217,6 +247,7 @@ namespace SystemInfo
         }
 
         // tupla di conversione byte -> (valore, unità di misura)
+        // fatto come oop per future estensioni
         public static (double Value, string Unit) ConvertSize(long bytes)
         {
             const double BYTE_TO_GB = 1024d * 1024d * 1024d;
@@ -234,6 +265,7 @@ namespace SystemInfo
 
 
         // processa una cartella
+        // da fare come oop per future estensioni
         private void TryProcessDirectory(string path, int topN)
         {
             long size = 0;
@@ -266,6 +298,7 @@ namespace SystemInfo
         }
 
         // calcola ricorsivamente la dimensione di una cartella
+        // da fare come oop per future estensioni
         private long GetDirectorySizeRecursive(string path, int topN)
         {
             long size = 0;
@@ -298,6 +331,7 @@ namespace SystemInfo
         }
 
         // recupera le top n cartelle più pesanti
+        // da fare come oop per future estensioni
         private void UpdateTopFolders(string path, long size, int topN)
         {
             if (size <= 0) return;

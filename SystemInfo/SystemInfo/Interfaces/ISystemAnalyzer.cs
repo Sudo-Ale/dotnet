@@ -7,8 +7,8 @@ using SystemInfo.Data;
 
 namespace SystemInfo.Interfaces
 {
-    interface IDriveAnalyzer
+    interface ISystemAnalyzer
     {
-        IEnumerable<DataDriveInfo> AnalyzeAllDrives();
+        public DataSystemInfo Analyze();
     }
 }

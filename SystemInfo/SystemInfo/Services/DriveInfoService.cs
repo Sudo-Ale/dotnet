@@ -1,42 +1,41 @@
-﻿using Hardware.Info;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SystemInfo.Data;
 using SystemInfo.Interfaces;
+using SystemInfo.UI;
 
 namespace SystemInfo.Services
 {
-    class DriveInfoService
+    class DriveInfoService : IDriveAnalyzer
     {
-        private readonly HardwareInfo _hardwareInfo;
-
-        public DriveInfoService(HardwareInfo hardwareInfo)
+        public IEnumerable<DataDriveInfo> AnalyzeAllDrives() 
         {
-            _hardwareInfo = hardwareInfo;
-        }
+            DriveInfo[] allDrives = DriveInfo.GetDrives();
+            var result = new List<DataDriveInfo>();
 
-        public DataDriveInfo GetDriveInfo() 
-        {
-            _hardwareInfo.RefreshAll();
-
-            return new DataDriveInfo
+            foreach (var d in allDrives)
             {
-                AudioCaption = _hardwareInfo.SoundDeviceList.FirstOrDefault()?.Caption ?? "N/A",
-                AudioDescription = _hardwareInfo.SoundDeviceList.FirstOrDefault()?.Description ?? "N/A",
-                AudioManufacturer = _hardwareInfo.SoundDeviceList.FirstOrDefault()?.Manufacturer ?? "N/A",
-                AudioName = _hardwareInfo.SoundDeviceList.FirstOrDefault()?.Name ?? "N/A",
-                AudioProductName = _hardwareInfo.SoundDeviceList.FirstOrDefault()?.ProductName ?? "N/A",
+                if (!d.IsReady)
+                    continue;
 
-                VideoName = _hardwareInfo.VideoControllerList.FirstOrDefault()?.Name ?? "N/A",
-                VideoDescription = _hardwareInfo.VideoControllerList.FirstOrDefault()?.Description ?? "N/A",
-                VideoCurrentRefreshRate = _hardwareInfo.VideoControllerList.FirstOrDefault()?.CurrentRefreshRate ?? 0,
-                VideoMinRefreshRate = _hardwareInfo.VideoControllerList.FirstOrDefault()?.MinRefreshRate ?? 0,
-                VideoMaxRefreshRate = _hardwareInfo.VideoControllerList.FirstOrDefault()?.MaxRefreshRate ?? 0,
-                VideoCurrentHorizontalResolution = _hardwareInfo.VideoControllerList.FirstOrDefault()?.CurrentHorizontalResolution ?? 0
-            };
+                result.Add(new DataDriveInfo
+                {
+                    Name = d.Name,
+                    DriveType = d.DriveType.ToString(),
+                    VolumeLabel = d.VolumeLabel,
+                    DriveFormat = d.DriveFormat,
+                    AvailableFreeSpace = d.AvailableFreeSpace,
+                    TotalFreeSpace = d.TotalFreeSpace,
+                    TotalSize = d.TotalSize,
+                    PercentageUsed = Math.Round((double)(d.TotalSize - d.TotalFreeSpace) / d.TotalSize * 100, 2)
+                    //100.0 * (drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
+                });
+            }
+            
+            return result;
         }
     }
 }

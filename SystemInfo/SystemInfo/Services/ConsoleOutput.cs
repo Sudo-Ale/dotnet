@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SystemInfo.Interfaces;
 
-namespace SystemInfo
+namespace SystemInfo.Services
 {
     class ConsoleOutput : IOutput
     {
