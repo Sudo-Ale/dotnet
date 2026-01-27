@@ -8,7 +8,7 @@ using SystemInfo.Interfaces;
 
 namespace SystemInfo.UI
 {
-    class DriveInfoPresenter
+    class DriveInfoPresenter : IPresenter
     {
         private readonly IOutput _output;
         private readonly IDriveAnalyzer _driveAnalyzer;

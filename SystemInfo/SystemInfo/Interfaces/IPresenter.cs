@@ -4,12 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SystemInfo
+namespace SystemInfo.Interfaces
 {
-    public class FolderSizeInfo
+    interface IPresenter
     {
-        public string? Path { get; set; }
-        public long Size { get; set; }
-
+        void ShowInfo();
     }
 }

@@ -7,7 +7,7 @@ using SystemInfo.Interfaces;
 
 namespace SystemInfo.UI
 {
-    class VideoInfoPresenter
+    class VideoInfoPresenter : IPresenter
     {
         private readonly IOutput _output;
         private readonly IVideoAnalyzer _videoAnalyzer;

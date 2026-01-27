@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace SystemInfo
 {
-    class SysInfoApplication
+    public class FolderSizeInfo
     {
-
+        public string? Path { get; set; }
+        public long Size { get; set; }
     }
 }

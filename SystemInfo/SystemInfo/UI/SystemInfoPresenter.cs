@@ -8,7 +8,7 @@ using SystemInfo.Interfaces;
 
 namespace SystemInfo.UI
 {
-    class SystemInfoPresenter
+    class SystemInfoPresenter : IPresenter
     {
         private readonly IOutput _output;
         private readonly ISizeConverter _sizeConverter;

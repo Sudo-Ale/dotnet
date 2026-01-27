@@ -9,7 +9,7 @@ using SystemInfo.Services;
 
 namespace SystemInfo.UI
 {
-    class SoundInfoPresenter
+    class SoundInfoPresenter : IPresenter
     {
         private readonly IOutput _output;
         private readonly ISoundAnalyzer _soundAnalyzer;
