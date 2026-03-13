@@ -111,36 +111,7 @@ namespace SystemInfo.Services
 
             return total;
         }
-        private void TryProcessDirectory(string path, int topN)
-        {
-            long size = 0;
-
-            try
-            {
-                // file diretti
-                foreach (var file in Directory.EnumerateFiles(path))
-                {
-                    try
-                    {
-                        var info = new FileInfo(file);
-                        size += info.Length;
-                    }
-                    catch { /* ignora file non accessibili */ }
-                }
-
-                // sottocartelle
-                foreach (var dir in Directory.EnumerateDirectories(path))
-                {
-                    size += GetDirectorySizeRecursive(dir, topN);
-                }
-
-                UpdateTopFolders(path, size, topN);
-            }
-            catch
-            {
-                // ignora cartelle non accessibili
-            }
-        }
+        
         private long GetDirectorySizeRecursive(string path, int topN)
         {
             long size = 0;
@@ -192,9 +163,40 @@ namespace SystemInfo.Services
         public IEnumerable<FolderSizeInfo> GetTopFolders(string rootPath, int topN)
         {
             _topFolders.Clear();
-            TryProcessDirectory(rootPath, topN);
+            //TryProcessDirectory(rootPath, topN);
+            GetDirectorySizeAndUpdateTop(rootPath, topN);
 
             return _topFolders.OrderByDescending(f => f.Size).ToList().AsReadOnly();
+        }
+        private long GetDirectorySizeAndUpdateTop(string path, int topN)
+        {
+            long size = 0;
+
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(path))
+                {
+                    try
+                    {
+                        var info = new FileInfo(file);
+                        size += info.Length;
+                    }
+                    catch { }
+                }
+
+                foreach (var dir in Directory.EnumerateDirectories(path))
+                {
+                    size += GetDirectorySizeAndUpdateTop(dir, topN);
+                }
+
+                UpdateTopFolders(path, size, topN);
+            }
+            catch
+            {
+                // ignora cartelle non accessibili
+            }
+
+            return size;
         }
 
         public IEnumerable<(string DriveName, IReadOnlyList<FolderSizeInfo> TopFolders)> AnalyzeTopFoldersPerDrive(int topN)
